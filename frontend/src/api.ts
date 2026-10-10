@@ -25,9 +25,14 @@ export interface Version {
   created_by: string | null; track_count: number; ready: boolean; duration: number | null;
   tracks: Track[]; created_at: string; updated_at: string;
 }
+export interface DocumentSummary {
+  id: string; song_id: string; title: string; position: number; revision: number; updated_by: string | null;
+  created_at: string; updated_at: string;
+}
+export interface SongDocument extends DocumentSummary { body: string }
 export interface Song {
   id: string; title: string; notes: string; folder_id: string | null; breadcrumbs: Breadcrumb[];
-  versions: Version[]; created_at: string; updated_at: string;
+  versions: Version[]; documents: DocumentSummary[]; created_at: string; updated_at: string;
 }
 export interface Library { folder: Folder | null; breadcrumbs: Breadcrumb[]; folders: Folder[]; songs: SongSummary[] }
 export interface Peaks { peaks_per_second: number; length: number; data: number[] }
@@ -53,7 +58,7 @@ export function setToken(token: string | null) {
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  constructor(public status: number, message: string, public body?: unknown) { super(message); }
 }
 
 let onUnauthorized: () => void = () => {};
@@ -66,13 +71,14 @@ export function authHeaders(): Record<string, string> {
 
 async function errorFrom(res: Response): Promise<ApiError> {
   let message = res.statusText || `HTTP ${res.status}`;
+  let body: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   try {
-    const body = await res.json();
+    body = await res.json();
     if (typeof body.detail === "string") message = body.detail;
     else if (Array.isArray(body.detail)) message = body.detail.map((d: { msg: string }) => d.msg).join(", ");
   } catch { /* non-JSON error */ }
   if (res.status === 401) onUnauthorized();
-  return new ApiError(res.status, message);
+  return new ApiError(res.status, message, body);
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -128,6 +134,14 @@ export const api = {
   updateTrack: (id: string, patch: { instrument?: string; position?: number }) => request<Track>("PATCH", `/tracks/${id}`, patch),
   deleteTrack: (id: string) => request<void>("DELETE", `/tracks/${id}`),
   reprocessTrack: (id: string) => request<Track>("POST", `/tracks/${id}/reprocess`),
+
+  document: (id: string) => request<SongDocument>("GET", `/documents/${id}`),
+  createDocument: (songId: string, title: string, body = "") =>
+    request<SongDocument>("POST", `/songs/${songId}/documents`, { title, body }),
+  /** Pass `revision` to have the server reject (409, current document in `ApiError.body`) a stale save. */
+  updateDocument: (id: string, patch: { title?: string; body?: string; position?: number; revision?: number }) =>
+    request<SongDocument>("PATCH", `/documents/${id}`, patch),
+  deleteDocument: (id: string) => request<void>("DELETE", `/documents/${id}`),
 
   /** Multipart upload with progress (fetch can't report upload progress). */
   uploadTrack(versionId: string, file: File, instrument: string, onProgress: (fraction: number) => void,

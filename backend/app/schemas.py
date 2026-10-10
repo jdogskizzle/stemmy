@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .models import Folder, Song, Track, User, Version
+from .models import Document, Folder, Song, Track, User, Version
 
 API = "/api/v1"
 
@@ -177,6 +177,39 @@ class VersionOut(Model):
     updated_at: datetime
 
 
+MAX_DOCUMENT_CHARS = 200_000
+
+
+class DocumentCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    body: str = Field("", max_length=MAX_DOCUMENT_CHARS)
+
+
+class DocumentUpdate(BaseModel):
+    title: str | None = Field(None, min_length=1, max_length=255)
+    body: str | None = Field(None, max_length=MAX_DOCUMENT_CHARS)
+    position: int | None = None
+    revision: int | None = Field(
+        None, description="The revision this edit is based on. If the body changed in the meantime, the update is "
+                          "rejected with 409 and the current document; omit to overwrite unconditionally.",
+    )
+
+
+class DocumentSummary(Model):
+    id: str
+    song_id: str
+    title: str
+    position: int
+    revision: int = Field(description="Increases each time the body changes")
+    updated_by: str | None = Field(description="Username of the last editor")
+    created_at: datetime
+    updated_at: datetime
+
+
+class DocumentOut(DocumentSummary):
+    body: str
+
+
 class SongOut(Model):
     id: str
     title: str
@@ -184,6 +217,7 @@ class SongOut(Model):
     folder_id: str | None
     breadcrumbs: list[Breadcrumb]
     versions: list[VersionOut] = Field(description="Newest recording first")
+    documents: list[DocumentSummary] = Field(description="Text documents (lyrics, chords...); fetch each for its body")
     created_at: datetime
     updated_at: datetime
 
@@ -251,11 +285,24 @@ def version_out(v: Version) -> VersionOut:
     )
 
 
+def document_summary(d: Document) -> DocumentSummary:
+    return DocumentSummary(
+        id=d.id, song_id=d.song_id, title=d.title, position=d.position, revision=d.revision,
+        updated_by=d.updated_by.username if d.updated_by else None,
+        created_at=d.created_at, updated_at=d.updated_at,
+    )
+
+
+def document_out(d: Document) -> DocumentOut:
+    return DocumentOut(**document_summary(d).model_dump(), body=d.body)
+
+
 def song_out(s: Song) -> SongOut:
     return SongOut(
         id=s.id, title=s.title, notes=s.notes, folder_id=s.folder_id,
         breadcrumbs=breadcrumbs(s.folder),
         versions=[version_out(v) for v in s.versions],
+        documents=[document_summary(d) for d in s.documents],
         created_at=s.created_at, updated_at=s.updated_at,
     )
 

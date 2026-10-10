@@ -189,6 +189,33 @@ a.card:hover, a.list-row:hover { border-color: #3a4152; background: var(--surfac
 .notes { margin-top: 4px; white-space: pre-wrap; }
 .shortcuts { margin-top: 14px; line-height: 2; }
 
+.documents { margin-top: 28px; }
+.documents-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.documents-head h2 { margin: 0; }
+.doc-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border); scrollbar-width: thin; }
+.doc-tab {
+  flex: none; padding: 8px 14px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  background: none; color: var(--muted); font: inherit; font-weight: 500; cursor: pointer;
+}
+.doc-tab:hover { color: var(--text); }
+.doc-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.doc-editor { background: var(--surface); border: 1px solid var(--border); border-top: 0; border-radius: 0 0 var(--radius) var(--radius); }
+.doc-toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 14px; border-bottom: 1px solid var(--border); }
+.doc-conflict {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px;
+  background: rgba(245, 165, 36, 0.12); border-bottom: 1px solid var(--border); font-size: 0.88rem;
+}
+.doc-text {
+  display: block; width: 100%; min-height: 240px; resize: none; overflow: hidden;
+  border: 0; border-radius: 0 0 var(--radius) var(--radius); background: transparent;
+  padding: 16px 18px; font-size: 1.02rem; line-height: 1.6; tab-size: 4;
+}
+.doc-text:focus { outline: none; }
+.doc-text.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.95rem; white-space: pre; overflow-x: auto; }
+.btn.active { color: var(--accent); background: rgba(245, 165, 36, 0.1); }
+.link { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; }
+.link:hover { text-decoration: underline; }
+
 .player { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
 .transport {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;

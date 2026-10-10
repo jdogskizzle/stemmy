@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from ..auth import current_user
 from ..db import get_db
-from ..models import Folder, Song, Track, Version, utcnow
+from ..models import Document, Folder, Song, Track, Version, utcnow
 from ..processing import delete_track_files, original_path
 from ..schemas import (
     FolderCreate, FolderOut, FolderTreeNode, FolderUpdate, InstrumentsOut, LibraryOut, SearchOut,
@@ -41,6 +41,7 @@ def load_song_out(db: Session, song_id: str) -> SongOut:
         select(Song).where(Song.id == song_id).options(
             selectinload(Song.versions).selectinload(Version.tracks),
             selectinload(Song.versions).selectinload(Version.created_by),
+            selectinload(Song.documents).selectinload(Document.updated_by),
         )
     )
     if not song:

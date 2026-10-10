@@ -9,7 +9,7 @@ from .auth import hash_password
 from .db import Base, SessionLocal, engine
 from .models import User
 from .processing import requeue_unfinished
-from .routers import library, tracks, users
+from .routers import documents, library, tracks, users
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("stemmy")
@@ -56,6 +56,7 @@ app.include_router(users.router)
 app.include_router(library.router)
 app.include_router(tracks.router)
 app.include_router(tracks.media)
+app.include_router(documents.router)
 
 
 @app.get("/api/health", tags=["meta"])

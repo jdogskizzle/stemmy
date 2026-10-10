@@ -4,6 +4,7 @@ import { api, downloadAuthenticated, type Song, type Track, type Version } from 
 import { decodedCache, prefetchMedia } from "../audio/cache";
 import { getEngine } from "../audio/engine";
 import { Menu } from "../components/Menu";
+import { Documents } from "../components/Documents";
 import { ConfirmDialog, Modal, PromptDialog } from "../components/Modal";
 import { Player } from "../components/Player";
 import { UploadDialog } from "../components/UploadDialog";
@@ -182,6 +183,8 @@ export default function SongPage() {
           )}
         </>
       )}
+
+      <Documents songId={song.id} documents={song.documents} onChanged={reload} />
 
       {dialog?.kind === "upload" && (
         <UploadDialog songId={song.id} onClose={() => { close(); setParams((p) => { p.delete("upload"); return p; }, { replace: true }); }}

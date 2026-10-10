@@ -74,6 +74,9 @@ class Song(Base):
         passive_deletes=True,
         order_by=lambda: [Version.recorded_on.desc(), Version.created_at.desc()],
     )
+    documents: Mapped[list["Document"]] = relationship(
+        back_populates="song", passive_deletes=True, order_by=lambda: [Document.position, Document.created_at]
+    )
 
 
 class Version(Base):
@@ -114,3 +117,23 @@ class Track(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
     version: Mapped[Version] = relationship(back_populates="tracks")
+
+
+class Document(Base):
+    """A plain-text document attached to a song (lyrics, chord chart, notes...)."""
+
+    __tablename__ = "documents"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    song_id: Mapped[str] = mapped_column(ForeignKey("songs.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    body: Mapped[str] = mapped_column(Text, default="")
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    # Bumped on every save; clients send it back so concurrent edits are detected instead of overwritten.
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    updated_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+    song: Mapped[Song] = relationship(back_populates="documents")
+    updated_by: Mapped[User | None] = relationship()
