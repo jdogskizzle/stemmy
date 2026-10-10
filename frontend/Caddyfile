@@ -1,0 +1,30 @@
+# SITE_ADDRESS controls HTTPS:
+#   ":80"                    -> plain HTTP (LAN / behind another proxy or tunnel)
+#   "music.example.com"      -> automatic HTTPS via Let's Encrypt (ports 80+443 must reach this host)
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy backend:8000 {
+			# Stream large uploads straight through instead of buffering them.
+			request_buffers 0
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * /srv
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@html not path /assets/*
+		header @html Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		-Server
+	}
+}

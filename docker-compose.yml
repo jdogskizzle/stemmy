@@ -1,0 +1,38 @@
+services:
+  backend:
+    build: ./backend
+    container_name: stemmy-backend
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      STEMMY_ADMIN_USERNAME: ${STEMMY_ADMIN_USERNAME:-admin}
+      STEMMY_ADMIN_PASSWORD: ${STEMMY_ADMIN_PASSWORD:-}
+      STEMMY_TOKEN_TTL_DAYS: ${STEMMY_TOKEN_TTL_DAYS:-30}
+      STEMMY_MAX_UPLOAD_MB: ${STEMMY_MAX_UPLOAD_MB:-1024}
+    volumes:
+      - ${STEMMY_DATA_DIR:-./data}:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build: ./frontend
+    container_name: stemmy-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
