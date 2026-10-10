@@ -40,8 +40,13 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    username: str | None = Field(None, min_length=1, max_length=64)
     is_admin: bool | None = None
     password: str | None = Field(None, min_length=6, max_length=256)
+
+
+class ProfileUpdate(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
 
 
 class PasswordChange(BaseModel):

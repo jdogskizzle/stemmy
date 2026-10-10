@@ -18,7 +18,7 @@ export default function LoginPage() {
   return (
     <div className="center-screen">
       <form className="login-card" onSubmit={submit}>
-        <div className="brand big"><img src="/favicon.svg" alt="" width={36} height={36} /> Stemmy</div>
+        <div className="brand big"><img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={36} height={36} /> Stemmy</div>
         <p className="muted">Band practice multitracks</p>
         <label className="field"><span>Username</span>
           <input autoFocus autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} />

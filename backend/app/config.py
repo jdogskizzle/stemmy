@@ -9,6 +9,9 @@ STREAM_DIR = MEDIA_DIR / "stream"
 PEAKS_DIR = MEDIA_DIR / "peaks"
 TMP_DIR = MEDIA_DIR / "tmp"
 
+# Path prefix when served behind a path-based reverse proxy (e.g. "/stemmy"); the proxy strips it.
+ROOT_PATH = os.environ.get("STEMMY_BASE_PATH", "").rstrip("/")
+
 DATABASE_URL = os.environ.get("STEMMY_DATABASE_URL", f"sqlite:///{DATA_DIR / 'stemmy.db'}")
 
 ADMIN_USERNAME = os.environ.get("STEMMY_ADMIN_USERNAME", "admin")

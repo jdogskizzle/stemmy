@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { api, type User } from "../api";
+import { api, withBase, type User } from "../api";
 import { useAuth } from "../auth";
-import { ConfirmDialog } from "../components/Modal";
+import { ConfirmDialog, PromptDialog } from "../components/Modal";
 import { formatDate } from "../util";
 
 export default function SettingsPage() {
@@ -9,16 +9,41 @@ export default function SettingsPage() {
   return (
     <div className="page narrow">
       <h1>Settings</h1>
+      <ChangeUsername />
       <ChangePassword />
       {user?.is_admin && <ManageUsers me={user} />}
       <section className="panel">
         <h2>API</h2>
         <p className="muted">
           Everything in the web app goes through a documented REST API, so other clients can use it too.
-          Browse it at <a href="/api/docs" target="_blank" rel="noreferrer">/api/docs</a>.
+          Browse it at <a href={withBase("/api/docs")} target="_blank" rel="noreferrer">{withBase("/api/docs")}</a>.
         </p>
       </section>
     </div>
+  );
+}
+
+function ChangeUsername() {
+  const { user, setUser } = useAuth();
+  const [username, setUsername] = useState(user?.username ?? "");
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      const updated = await api.updateMe({ username: username.trim() });
+      setUser(updated);
+      setUsername(updated.username);
+      setMessage({ ok: true, text: "Username changed. Use the new name next time you sign in." });
+    } catch (err) { setMessage({ ok: false, text: (err as Error).message }); }
+  };
+  return (
+    <form className="panel" onSubmit={submit}>
+      <h2>Username</h2>
+      <label className="field"><span>Username</span>
+        <input autoComplete="username" maxLength={64} value={username} onChange={(e) => setUsername(e.target.value)} /></label>
+      {message && <p className={message.ok ? "ok" : "error"}>{message.text}</p>}
+      <button className="btn primary" disabled={!username.trim() || username.trim() === user?.username}>Change username</button>
+    </form>
   );
 }
 
@@ -54,6 +79,7 @@ function ManageUsers({ me }: { me: User }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<User | null>(null);
+  const [toRename, setToRename] = useState<User | null>(null);
   const reload = () => api.users().then(setUsers).catch((e) => setError(e.message));
   useEffect(() => { reload(); }, []);
 
@@ -78,6 +104,7 @@ function ManageUsers({ me }: { me: User }) {
               <span className="muted small">{u.is_admin ? "Admin" : "Member"} · joined {formatDate(u.created_at)}</span>
             </span>
             {u.id !== me.id && <>
+              <button className="btn ghost small" onClick={() => setToRename(u)}>Rename</button>
               <button className="btn ghost small" onClick={() => api.updateUser(u.id, { is_admin: !u.is_admin }).then(reload)}>
                 {u.is_admin ? "Remove admin" : "Make admin"}
               </button>
@@ -96,6 +123,10 @@ function ManageUsers({ me }: { me: User }) {
         {error && <p className="error">{error}</p>}
         <button className="btn primary" disabled={!username.trim() || password.length < 6}>Add member</button>
       </form>
+      {toRename && (
+        <PromptDialog title="Rename member" label="Username" initial={toRename.username} onClose={() => setToRename(null)}
+          onConfirm={async (username) => { await api.updateUser(toRename.id, { username }); reload(); }} />
+      )}
       {toDelete && (
         <ConfirmDialog title="Remove member" message={<>Remove <b>{toDelete.username}</b>? Their uploads stay in the library.</>}
           confirmLabel="Remove" onClose={() => setToDelete(null)}

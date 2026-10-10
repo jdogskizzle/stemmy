@@ -9,6 +9,7 @@ services:
       STEMMY_ADMIN_PASSWORD: ${STEMMY_ADMIN_PASSWORD:-}
       STEMMY_TOKEN_TTL_DAYS: ${STEMMY_TOKEN_TTL_DAYS:-30}
       STEMMY_MAX_UPLOAD_MB: ${STEMMY_MAX_UPLOAD_MB:-1024}
+      STEMMY_BASE_PATH: ${STEMMY_BASE_PATH:-}
     volumes:
       - ${STEMMY_DATA_DIR:-./data}:/data
     healthcheck:
@@ -18,7 +19,10 @@ services:
       retries: 3
 
   web:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        STEMMY_BASE_PATH: ${STEMMY_BASE_PATH:-}
     container_name: stemmy-web
     restart: unless-stopped
     depends_on:

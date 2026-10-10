@@ -11,7 +11,7 @@
  *
  * Muting and soloing never touch these layers. They only ramp gain nodes, so they're instant.
  */
-import { authHeaders, getToken, type Peaks } from "../api";
+import { authHeaders, getToken, withBase, type Peaks } from "../api";
 
 const CACHE_NAME = "stemmy-media-v1";
 const MAX_PERSISTED_ENTRIES = 400;
@@ -45,7 +45,8 @@ export function fetchMedia(url: string, onProgress?: ProgressFn): Promise<ArrayB
   return p;
 }
 
-async function fetchMediaUncached(url: string, onProgress?: ProgressFn): Promise<ArrayBuffer> {
+async function fetchMediaUncached(path: string, onProgress?: ProgressFn): Promise<ArrayBuffer> {
+  const url = withBase(path);
   const cache = await openCache();
   if (cache) {
     const hit = await cache.match(url).catch(() => undefined);

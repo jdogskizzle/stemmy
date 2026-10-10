@@ -49,6 +49,7 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
     lifespan=lifespan,
+    root_path=config.ROOT_PATH,
 )
 
 app.include_router(users.router)

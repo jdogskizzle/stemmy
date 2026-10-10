@@ -32,6 +32,14 @@ export interface Song {
 export interface Library { folder: Folder | null; breadcrumbs: Breadcrumb[]; folders: Folder[]; songs: SongSummary[] }
 export interface Peaks { peaks_per_second: number; length: number; data: number[] }
 
+/** Path prefix the app is served under ("" at the root, "/stemmy" behind a path proxy). */
+export const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+/** Resolve a server path (as returned by the API, e.g. track.audio_url) against the base path. */
+export function withBase(path: string): string {
+  return path.startsWith("/") ? `${BASE_PATH}${path}` : path;
+}
+
 const TOKEN_KEY = "stemmy.token";
 
 export function getToken(): string | null {
@@ -68,7 +76,7 @@ async function errorFrom(res: Response): Promise<ApiError> {
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`/api/v1${path}`, {
+  const res = await fetch(withBase(`/api/v1${path}`), {
     method,
     headers: { ...authHeaders(), ...(body !== undefined ? { "Content-Type": "application/json" } : {}) },
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -86,13 +94,14 @@ export const api = {
   login: (username: string, password: string) => request<TokenOut>("POST", "/auth/login", { username, password }),
   refresh: () => request<TokenOut>("POST", "/auth/refresh"),
   me: () => request<User>("GET", "/auth/me"),
+  updateMe: (patch: { username: string }) => request<User>("PATCH", "/auth/me", patch),
   changePassword: (current_password: string, new_password: string) =>
     request<void>("POST", "/auth/password", { current_password, new_password }),
 
   users: () => request<User[]>("GET", "/users"),
   createUser: (username: string, password: string, is_admin: boolean) =>
     request<User>("POST", "/users", { username, password, is_admin }),
-  updateUser: (id: string, patch: { is_admin?: boolean; password?: string }) => request<User>("PATCH", `/users/${id}`, patch),
+  updateUser: (id: string, patch: { username?: string; is_admin?: boolean; password?: string }) => request<User>("PATCH", `/users/${id}`, patch),
   deleteUser: (id: string) => request<void>("DELETE", `/users/${id}`),
 
   library: (folderId: string | null) => request<Library>("GET", `/library${q({ folder_id: folderId })}`),
@@ -125,7 +134,7 @@ export const api = {
               signal?: AbortSignal): Promise<Track> {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", `/api/v1/versions/${versionId}/tracks`);
+      xhr.open("POST", withBase(`/api/v1/versions/${versionId}/tracks`));
       const token = getToken();
       if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
       xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
@@ -149,7 +158,7 @@ export const api = {
 
 /** Download an authenticated file (original upload) via a temporary object URL. */
 export async function downloadAuthenticated(url: string, filename: string) {
-  const res = await fetch(url, { headers: authHeaders() });
+  const res = await fetch(withBase(url), { headers: authHeaders() });
   if (!res.ok) throw await errorFrom(res);
   const blobUrl = URL.createObjectURL(await res.blob());
   const a = Object.assign(document.createElement("a"), { href: blobUrl, download: filename });

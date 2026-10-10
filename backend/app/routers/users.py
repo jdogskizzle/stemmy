@@ -5,9 +5,25 @@ from sqlalchemy.orm import Session
 from ..auth import admin_user, create_token, current_user, hash_password, verify_password
 from ..db import get_db
 from ..models import User
-from ..schemas import LoginIn, PasswordChange, TokenOut, UserCreate, UserOut, UserUpdate, user_out
+from ..schemas import LoginIn, PasswordChange, ProfileUpdate, TokenOut, UserCreate, UserOut, UserUpdate, user_out
 
 router = APIRouter(prefix="/api/v1", tags=["auth & users"])
+
+
+def _username_taken(db: Session, username: str, exclude_id: str | None = None) -> bool:
+    query = select(User.id).where(func.lower(User.username) == username.lower())
+    if exclude_id:
+        query = query.where(User.id != exclude_id)
+    return db.scalar(query) is not None
+
+
+def _set_username(db: Session, user: User, raw: str) -> None:
+    username = raw.strip()
+    if not username:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Username can't be blank")
+    if _username_taken(db, username, exclude_id=user.id):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Username already taken")
+    user.username = username
 
 
 @router.post("/auth/login", response_model=TokenOut)
@@ -30,6 +46,13 @@ def me(user: User = Depends(current_user)):
     return user_out(user)
 
 
+@router.patch("/auth/me", response_model=UserOut, summary="Update your own profile (username)")
+def update_me(body: ProfileUpdate, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    _set_username(db, user, body.username)
+    db.commit()
+    return user_out(user)
+
+
 @router.post("/auth/password", status_code=204)
 def change_password(body: PasswordChange, user: User = Depends(current_user), db: Session = Depends(get_db)):
     if not verify_password(body.current_password, user.password_hash):
@@ -47,7 +70,9 @@ def list_users(_: User = Depends(current_user), db: Session = Depends(get_db)):
 @router.post("/users", response_model=UserOut, status_code=201)
 def create_user(body: UserCreate, _: User = Depends(admin_user), db: Session = Depends(get_db)):
     username = body.username.strip()
-    if db.scalar(select(User).where(func.lower(User.username) == username.lower())):
+    if not username:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Username can't be blank")
+    if _username_taken(db, username):
         raise HTTPException(status.HTTP_409_CONFLICT, "Username already taken")
     user = User(username=username, password_hash=hash_password(body.password), is_admin=body.is_admin)
     db.add(user)
@@ -60,6 +85,8 @@ def update_user(user_id: str, body: UserUpdate, admin: User = Depends(admin_user
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(404, "User not found")
+    if body.username is not None:
+        _set_username(db, user, body.username)
     if body.is_admin is not None:
         if user.id == admin.id and not body.is_admin:
             raise HTTPException(400, "You can't remove your own admin rights")

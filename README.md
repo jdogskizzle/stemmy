@@ -50,6 +50,7 @@ If you'd rather not open ports, keep `SITE_ADDRESS=:80` and put Stemmy behind a 
 | `PUID` / `PGID` | `1000` | Owner of the data directory |
 | `SITE_ADDRESS` | `:80` | `:80` for HTTP, or a domain for automatic HTTPS |
 | `HTTP_PORT` / `HTTPS_PORT` | `80` / `443` | Host ports |
+| `STEMMY_BASE_PATH` | — | Serve under a sub-path (e.g. `/stemmy`) behind a path-routing proxy that strips the prefix; set `SITE_ADDRESS=:80` and let that proxy handle HTTPS |
 | `STEMMY_TOKEN_TTL_DAYS` | `30` | Login lifetime (refreshed on each app start) |
 | `STEMMY_MAX_UPLOAD_MB` | `1024` | Per-file upload limit |
 
@@ -75,6 +76,7 @@ Media endpoints also accept `?access_token=` for native players that can't set h
 
 | | |
 |---|---|
+| `GET/PATCH /api/v1/auth/me` | Your account; PATCH `{username}` to rename yourself |
 | `GET /api/v1/library?folder_id=` | Folder contents (root if omitted): `{folder, breadcrumbs, folders, songs}` |
 | `GET /api/v1/folders/tree` | All folders as a nested tree |
 | `POST/PATCH/DELETE /api/v1/folders[/{id}]` | Create, rename/move (`parent_id: null` = root), delete recursively |
