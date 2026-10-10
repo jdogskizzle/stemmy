@@ -33,7 +33,7 @@ def create_document(song_id: str, body: DocumentCreate, user: User = Depends(cur
     if not db.get(Song, song_id):
         raise HTTPException(404, "Song not found")
     last = db.scalar(select(func.max(Document.position)).where(Document.song_id == song_id))
-    doc = Document(song_id=song_id, title=body.title.strip(), body=body.body,
+    doc = Document(song_id=song_id, title=body.title.strip(), body=body.body, format=body.format,
                    position=(last + 1) if last is not None else 0, updated_by_id=user.id)
     db.add(doc)
     touch_song(db, song_id)
@@ -54,6 +54,8 @@ def update_document(document_id: str, body: DocumentUpdate, user: User = Depends
         return JSONResponse(document_out(doc).model_dump(mode="json"), status_code=409)
     if body.title is not None:
         doc.title = body.title.strip()
+    if body.format is not None:
+        doc.format = body.format
     if body.position is not None:
         doc.position = body.position
     if body.body is not None and body.body != doc.body:

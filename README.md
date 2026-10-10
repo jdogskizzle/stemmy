@@ -12,9 +12,10 @@ instrument stems, flip between versions recorded on different dates, and mute or
   it stays soloed.
 - **Waveforms.** Each stem gets a lane, and a mix waveform at the top reflects whatever is currently audible.
   Click to seek, or drag to set an A–B loop (the loop is gapless).
-- **Lyrics & notes.** Each song can hold plain-text documents (lyrics, chord charts, set notes) with an autosaving
-  editor, `.txt` import/download, and a monospace mode for lining chords up over lyrics. If two people edit the
-  same document, the second save is flagged instead of silently overwriting the first.
+- **Lyrics & notes.** Each song can hold documents (lyrics, chord charts, set notes), in plain text or Markdown
+  (with tables), with an autosaving editor, `.txt`/`.md` import and download, and a monospace mode for lining
+  chords up over lyrics. Markdown exported from Google Docs imports directly (embedded images are dropped).
+  If two people edit the same document, the second save is flagged instead of silently overwriting the first.
 - **Caching.** Media URLs carry a content hash and are served `immutable`. The browser keeps encoded audio in the
   Cache API (persists across visits), decoded audio in a memory-bounded LRU (the current version is pinned), and
   prefetches other recent versions in the background.
@@ -86,8 +87,8 @@ Media endpoints also accept `?access_token=` for native players that can't set h
 | `POST/GET/PATCH/DELETE /api/v1/songs[/{id}]` | Song with every version and track embedded |
 | `POST /api/v1/songs/{id}/versions` | Create a version `{label, recorded_on, notes}` |
 | `POST /api/v1/versions/{id}/tracks` | Multipart upload: `file` + `instrument` (processed in the background) |
-| `POST /api/v1/songs/{id}/documents` | Create a text document `{title, body}` |
-| `GET/PATCH/DELETE /api/v1/documents/{id}` | Read, edit `{title, body, position, revision}`, delete. A stale `revision` gets 409 + the current document |
+| `POST /api/v1/songs/{id}/documents` | Create a document `{title, body, format: "text" \| "markdown"}` |
+| `GET/PATCH/DELETE /api/v1/documents/{id}` | Read, edit `{title, body, format, position, revision}`, delete. A stale `revision` gets 409 + the current document |
 | `GET /api/v1/tracks/{id}/audio?v=hash` | Streaming AAC, Range-capable, immutable per hash |
 | `GET /api/v1/tracks/{id}/peaks?v=hash` | `{peaks_per_second, length, data}` |
 | `GET /api/v1/tracks/{id}/original` | Original upload |

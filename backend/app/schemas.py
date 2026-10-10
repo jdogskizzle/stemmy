@@ -179,15 +179,19 @@ class VersionOut(Model):
 
 MAX_DOCUMENT_CHARS = 200_000
 
+DocumentFormat = Literal["text", "markdown"]
+
 
 class DocumentCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     body: str = Field("", max_length=MAX_DOCUMENT_CHARS)
+    format: DocumentFormat = "text"
 
 
 class DocumentUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=255)
     body: str | None = Field(None, max_length=MAX_DOCUMENT_CHARS)
+    format: DocumentFormat | None = None
     position: int | None = None
     revision: int | None = Field(
         None, description="The revision this edit is based on. If the body changed in the meantime, the update is "
@@ -199,6 +203,7 @@ class DocumentSummary(Model):
     id: str
     song_id: str
     title: str
+    format: DocumentFormat = Field(description="How to display the body: plain text or (GitHub-flavored) Markdown")
     position: int
     revision: int = Field(description="Increases each time the body changes")
     updated_by: str | None = Field(description="Username of the last editor")
@@ -287,7 +292,7 @@ def version_out(v: Version) -> VersionOut:
 
 def document_summary(d: Document) -> DocumentSummary:
     return DocumentSummary(
-        id=d.id, song_id=d.song_id, title=d.title, position=d.position, revision=d.revision,
+        id=d.id, song_id=d.song_id, title=d.title, format=d.format, position=d.position, revision=d.revision,
         updated_by=d.updated_by.username if d.updated_by else None,
         created_at=d.created_at, updated_at=d.updated_at,
     )

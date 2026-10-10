@@ -128,6 +128,8 @@ class Document(Base):
     song_id: Mapped[str] = mapped_column(ForeignKey("songs.id", ondelete="CASCADE"), index=True)
     title: Mapped[str] = mapped_column(String(255))
     body: Mapped[str] = mapped_column(Text, default="")
+    # "text" (plain) or "markdown"
+    format: Mapped[str] = mapped_column(String(16), default="text", server_default="text")
     position: Mapped[int] = mapped_column(Integer, default=0)
     # Bumped on every save; clients send it back so concurrent edits are detected instead of overwritten.
     revision: Mapped[int] = mapped_column(Integer, default=1)

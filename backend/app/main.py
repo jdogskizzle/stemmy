@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from sqlalchemy import func, select
+from sqlalchemy import func, inspect, select, text
 
 from . import config
 from .auth import hash_password
@@ -28,9 +28,23 @@ def _bootstrap_admin() -> None:
         log.info("Created admin user '%s'", config.ADMIN_USERNAME)
 
 
+def _migrate() -> None:
+    """Add columns introduced after a table was first created (create_all only creates missing tables)."""
+    added = {"documents": {"format": "VARCHAR(16) NOT NULL DEFAULT 'text'"}}
+    with engine.begin() as conn:
+        insp = inspect(conn)
+        for table, columns in added.items():
+            existing = {c["name"] for c in insp.get_columns(table)}
+            for name, ddl in columns.items():
+                if name not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
+                    log.info("Added column %s.%s", table, name)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(engine)
+    _migrate()
     _bootstrap_admin()
     requeue_unfinished()
     yield

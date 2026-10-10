@@ -25,8 +25,9 @@ export interface Version {
   created_by: string | null; track_count: number; ready: boolean; duration: number | null;
   tracks: Track[]; created_at: string; updated_at: string;
 }
+export type DocumentFormat = "text" | "markdown";
 export interface DocumentSummary {
-  id: string; song_id: string; title: string; position: number; revision: number; updated_by: string | null;
+  id: string; song_id: string; title: string; format: DocumentFormat; position: number; revision: number; updated_by: string | null;
   created_at: string; updated_at: string;
 }
 export interface SongDocument extends DocumentSummary { body: string }
@@ -136,10 +137,10 @@ export const api = {
   reprocessTrack: (id: string) => request<Track>("POST", `/tracks/${id}/reprocess`),
 
   document: (id: string) => request<SongDocument>("GET", `/documents/${id}`),
-  createDocument: (songId: string, title: string, body = "") =>
-    request<SongDocument>("POST", `/songs/${songId}/documents`, { title, body }),
+  createDocument: (songId: string, doc: { title: string; body?: string; format?: DocumentFormat }) =>
+    request<SongDocument>("POST", `/songs/${songId}/documents`, doc),
   /** Pass `revision` to have the server reject (409, current document in `ApiError.body`) a stale save. */
-  updateDocument: (id: string, patch: { title?: string; body?: string; position?: number; revision?: number }) =>
+  updateDocument: (id: string, patch: { title?: string; body?: string; format?: DocumentFormat; position?: number; revision?: number }) =>
     request<SongDocument>("PATCH", `/documents/${id}`, patch),
   deleteDocument: (id: string) => request<void>("DELETE", `/documents/${id}`),
 
