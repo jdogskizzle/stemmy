@@ -97,17 +97,22 @@ export default function LibraryPage() {
       {songs.length > 0 && (
         <section>
           <h3 className="section-label">Songs</h3>
-          <div className="list">
+          <div className="grid song-grid">
             {songs.map((s) => (
-              <Link key={s.id} to={`/songs/${s.id}`} className="list-row">
-                <span className="song-icon">♪</span>
+              <Link key={s.id} to={`/songs/${s.id}`} className="card song-card" title={s.title}>
+                <span className="card-title">{s.title}</span>
+                <span className="song-art" aria-hidden>♪</span>
                 <span className="card-main">
-                  <span className="card-title">{s.title}</span>
-                  <span className="muted small">
+                  <span className="muted small ellipsis">
                     {s.version_count === 0 ? "No versions yet" : `${s.version_count} version${s.version_count === 1 ? "" : "s"}`}
-                    {s.latest_version && ` · latest ${s.latest_version.label}${s.latest_version.recorded_on ? ` (${formatDate(s.latest_version.recorded_on)})` : ""}`}
                     {s.size_bytes > 0 && ` · ${formatBytes(s.size_bytes)}`}
                   </span>
+                  {s.latest_version && (
+                    <span className="muted small ellipsis">
+                      Latest: {s.latest_version.label}
+                      {s.latest_version.recorded_on && ` (${formatDate(s.latest_version.recorded_on)})`}
+                    </span>
+                  )}
                 </span>
                 <Menu items={[
                   { label: "Rename", onClick: () => setDialog({ kind: "renameSong", song: s }) },

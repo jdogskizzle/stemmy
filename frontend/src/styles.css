@@ -114,8 +114,26 @@ a.card:hover, a.list-row:hover { border-color: #3a4152; background: var(--surfac
 .card-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .card-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .folder-icon { font-size: 1.4rem; }
+/* Songs: fixed square tiles. Text is clamped so a long title never changes the card's size. */
+.song-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.song-card {
+  position: relative; aspect-ratio: 1; min-height: 0; overflow: hidden;
+  flex-direction: column; align-items: stretch; gap: 0; padding: 14px;
+}
+.song-card > .menu { position: absolute; top: 6px; right: 6px; }
+.song-card .card-title {
+  flex: none; padding-right: 26px; /* clear of the menu button */
+  font-size: 1.1rem; line-height: 1.3; white-space: normal; overflow-wrap: anywhere;
+  height: calc(3 * 1.3em); /* always reserve three lines so the note sits in the same spot on every card */
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.song-art {
+  flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden;
+  font-size: 2.4rem; line-height: 1; color: var(--accent); opacity: 0.35;
+}
+.song-card .card-main { flex: none; gap: 3px; }
 .song-icon {
-  width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center;
+  flex: none; width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center;
   background: rgba(245, 165, 36, 0.12); color: var(--accent); font-size: 1.1rem;
 }
 .date-chip {
