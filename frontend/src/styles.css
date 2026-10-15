@@ -124,7 +124,7 @@ a.card:hover, a.list-row:hover { border-color: #3a4152; background: var(--surfac
 
 .menu { position: relative; }
 .menu-pop {
-  position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; min-width: 170px;
+  position: fixed; z-index: 40; min-width: 170px; max-height: calc(100vh - 16px); overflow-y: auto;
   background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 4px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
