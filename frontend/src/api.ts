@@ -35,6 +35,9 @@ export interface Song {
   id: string; title: string; notes: string; folder_id: string | null; breadcrumbs: Breadcrumb[];
   versions: Version[]; documents: DocumentSummary[]; created_at: string; updated_at: string;
 }
+export interface DateSummary { date: string; version_count: number; song_count: number }
+export interface DateEntry { song_id: string; song_title: string; folder_id: string | null; breadcrumbs: Breadcrumb[]; version: Version }
+export interface RecordingDate { date: string; previous: string | null; next: string | null; entries: DateEntry[] }
 export interface Library { folder: Folder | null; breadcrumbs: Breadcrumb[]; folders: Folder[]; songs: SongSummary[] }
 export interface Peaks { peaks_per_second: number; length: number; data: number[] }
 
@@ -122,6 +125,8 @@ export const api = {
 
   createSong: (title: string, folder_id: string | null) => request<Song>("POST", "/songs", { title, folder_id }),
   song: (id: string) => request<Song>("GET", `/songs/${id}`),
+  dates: () => request<DateSummary[]>("GET", "/dates"),
+  recordingDate: (day: string) => request<RecordingDate>("GET", `/dates/${day}`),
   updateSong: (id: string, patch: { title?: string; notes?: string; folder_id?: string | null }) =>
     request<Song>("PATCH", `/songs/${id}`, patch),
   deleteSong: (id: string) => request<void>("DELETE", `/songs/${id}`),

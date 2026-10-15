@@ -1,3 +1,4 @@
+import datetime as dt
 from datetime import date, datetime
 from typing import Literal
 
@@ -242,6 +243,27 @@ class InstrumentsOut(BaseModel):
 class SearchOut(BaseModel):
     folders: list[FolderOut]
     songs: list[SongSummary]
+
+
+class DateSummary(BaseModel):
+    date: dt.date = Field(description="Recording date (upload date for versions without one)")
+    version_count: int
+    song_count: int
+
+
+class DateEntry(BaseModel):
+    song_id: str
+    song_title: str
+    folder_id: str | None
+    breadcrumbs: list[Breadcrumb] = Field(description="The song's folder path")
+    version: VersionOut
+
+
+class DateOut(BaseModel):
+    date: dt.date
+    previous: date | None = Field(description="The closest earlier date with recordings")
+    next: date | None = Field(description="The closest later date with recordings")
+    entries: list[DateEntry] = Field(description="Every version from this date, by song title")
 
 
 # ---------- serializers ----------

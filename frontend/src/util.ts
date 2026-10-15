@@ -12,6 +12,11 @@ export function formatDate(iso: string | null): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** "Wednesday, October 7, 2026" for a YYYY-MM-DD calendar date. */
+export function formatLongDate(iso: string): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+}
+
 export function todayIso(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

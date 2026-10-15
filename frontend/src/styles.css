@@ -117,6 +117,13 @@ a.card:hover, a.list-row:hover { border-color: #3a4152; background: var(--surfac
   width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center;
   background: rgba(245, 165, 36, 0.12); color: var(--accent); font-size: 1.1rem;
 }
+.date-chip {
+  width: 34px; height: 34px; border-radius: 8px; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; line-height: 1; background: rgba(245, 165, 36, 0.12); color: var(--accent); flex: none;
+}
+.date-chip span { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.date-chip b { font-size: 0.95rem; }
+.date-jump { width: auto; }
 .empty { text-align: center; padding: 48px 16px; border: 1px dashed var(--border); border-radius: var(--radius); }
 .empty .btn { margin-top: 10px; }
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; }

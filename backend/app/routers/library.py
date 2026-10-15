@@ -1,14 +1,17 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from ..auth import current_user
 from ..db import get_db
-from ..models import Document, Folder, Song, Track, Version, utcnow
+from ..models import Document, Folder, Song, Track, Version, utcnow, version_day_sql
 from ..processing import delete_track_files, original_path
 from ..schemas import (
-    FolderCreate, FolderOut, FolderTreeNode, FolderUpdate, InstrumentsOut, LibraryOut, SearchOut,
-    SongCreate, SongOut, SongUpdate, breadcrumbs, folder_out, song_out, song_summary,
+    DateEntry, DateOut, DateSummary, FolderCreate, FolderOut, FolderTreeNode, FolderUpdate, InstrumentsOut,
+    LibraryOut, SearchOut, SongCreate, SongOut, SongUpdate, breadcrumbs, folder_out, song_out, song_summary,
+    version_out,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["library"], dependencies=[Depends(current_user)])
@@ -102,6 +105,38 @@ def search(q: str = Query(min_length=1), db: Session = Depends(get_db)):
     )
     songs = db.scalars(select(Song).where(func.lower(Song.title).like(pattern)).options(*_song_load).limit(50))
     return SearchOut(folders=[folder_out(f) for f in folders], songs=[song_summary(s) for s in songs])
+
+
+@router.get("/dates", response_model=list[DateSummary], summary="Every date with recordings, newest first")
+def dates(db: Session = Depends(get_db)):
+    day = version_day_sql()
+    rows = db.execute(
+        select(day.label("day"), func.count(Version.id), func.count(func.distinct(Version.song_id)))
+        .group_by(day).order_by(day.desc())
+    ).all()
+    return [DateSummary(date=date.fromisoformat(str(d)), version_count=v, song_count=s) for d, v, s in rows]
+
+
+@router.get("/dates/{day}", response_model=DateOut, summary="Every version recorded on a date, across all songs")
+def date_detail(day: date, db: Session = Depends(get_db)):
+    key = version_day_sql()
+    versions = db.scalars(
+        select(Version).join(Song).where(key == day)
+        .options(selectinload(Version.song), selectinload(Version.tracks), selectinload(Version.created_by))
+        .order_by(func.lower(Song.title), Version.position, Version.created_at)
+    ).all()
+    previous = db.scalar(select(func.max(key)).where(key < day))
+    following = db.scalar(select(func.min(key)).where(key > day))
+    return DateOut(
+        date=day,
+        previous=date.fromisoformat(str(previous)) if previous else None,
+        next=date.fromisoformat(str(following)) if following else None,
+        entries=[
+            DateEntry(song_id=v.song.id, song_title=v.song.title, folder_id=v.song.folder_id,
+                      breadcrumbs=breadcrumbs(v.song.folder), version=version_out(v))
+            for v in versions
+        ],
+    )
 
 
 @router.get("/instruments", response_model=InstrumentsOut)

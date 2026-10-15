@@ -157,6 +157,7 @@ export default function SongPage() {
                 <span className="muted small">
                   {version.track_count} track{version.track_count === 1 ? "" : "s"}
                   {version.created_by && ` · uploaded by ${version.created_by}`}
+                  {" · "}<Link to={`/dates/${versionDay(version)}`} className="link">Everything from {formatDate(versionDay(version))}</Link>
                 </span>
                 {version.notes && <p className="notes">{version.notes}</p>}
               </div>
