@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, downloadAuthenticated, type Song, type Track, type Version } from "../api";
 import { decodedCache, prefetchMedia } from "../audio/cache";
@@ -15,6 +15,9 @@ type Dialog =
   | { kind: "deleteVersion"; version: Version } | { kind: "renameSong" } | { kind: "deleteSong" }
   | { kind: "renameTrack"; track: Track } | { kind: "deleteTrack"; track: Track };
 
+/** The day a version sorts under: its recording date, else its (UTC) upload day, matching the server. */
+const versionDay = (v: Version) => v.recorded_on ?? v.created_at.slice(0, 10);
+
 export default function SongPage() {
   const { songId } = useParams() as { songId: string };
   const [params, setParams] = useSearchParams();
@@ -28,8 +31,26 @@ export default function SongPage() {
   useEffect(() => { reload(); }, [reload]);
   useEffect(() => () => engine.unload(), [engine]);
 
-  const version = song?.versions.find((v) => v.id === params.get("v")) ?? song?.versions[0] ?? null;
+  // Versions run oldest to newest, left to right; the newest is selected unless the URL picks one.
+  const version = song?.versions.find((v) => v.id === params.get("v")) ?? song?.versions[song.versions.length - 1] ?? null;
   const selectVersion = (id: string) => setParams((p) => { p.set("v", id); p.delete("upload"); return p; }, { replace: true });
+
+  // Keep the selected version in view; the newest sits at the far right of a list that can scroll.
+  const versionStrip = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    versionStrip.current?.querySelector(".version-pill.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [version?.id, song?.versions.length]);
+
+  // Same-day versions have no natural order, so the band sets it by swapping neighbours.
+  const moveVersion = async (v: Version, step: -1 | 1) => {
+    if (!song) return;
+    const ids = song.versions.map((x) => x.id);
+    const i = ids.indexOf(v.id);
+    [ids[i], ids[i + step]] = [ids[i + step], ids[i]];
+    // Fails only if someone added or removed a version meanwhile; the reload shows the real order either way.
+    await api.orderVersions(song.id, ids).catch(() => {});
+    await reload();
+  };
 
   // Poll while uploads are processing.
   const processing = song?.versions.some((v) => v.tracks.some((t) => t.status === "pending" || t.status === "processing"));
@@ -50,7 +71,7 @@ export default function SongPage() {
     let cancelled = false;
     engine.load(readyTracks.map((t) => ({ id: t.id, instrument: t.instrument, url: t.audio_url! }))).then(() => {
       if (cancelled) return;
-      const others = song.versions.filter((v) => v.id !== version?.id).slice(0, 3)
+      const others = song.versions.filter((v) => v.id !== version?.id).slice(-3).reverse()
         .flatMap((v) => v.tracks.filter((t) => t.audio_url).map((t) => t.audio_url!));
       void prefetchMedia(others);
     });
@@ -77,7 +98,7 @@ export default function SongPage() {
         else engine.setMute(lane.id, !lane.muted);
       } else if ((e.key === "[" || e.key === "]") && song && version) {
         const i = song.versions.findIndex((v) => v.id === version.id);
-        const next = song.versions[i + (e.key === "]" ? -1 : 1)]; // list is newest-first; "]" = newer
+        const next = song.versions[i + (e.key === "]" ? 1 : -1)]; // list is oldest-first; "]" = newer
         if (next) selectVersion(next.id);
       }
     };
@@ -119,7 +140,7 @@ export default function SongPage() {
         </div>
       ) : (
         <>
-          <div className="versions" role="tablist" aria-label="Versions">
+          <div className="versions" role="tablist" aria-label="Versions" ref={versionStrip}>
             {song.versions.map((v) => (
               <button key={v.id} role="tab" aria-selected={v.id === version?.id}
                 className={`version-pill ${v.id === version?.id ? "active" : ""}`} onClick={() => selectVersion(v.id)}>
@@ -142,6 +163,7 @@ export default function SongPage() {
               <button className="btn small" onClick={() => setDialog({ kind: "addTracks", version })}>Add tracks</button>
               <Menu items={[
                 { label: "Edit version", onClick: () => setDialog({ kind: "editVersion", version }) },
+                ...sameDayMoves(song.versions, version, moveVersion),
                 { label: "Delete version", danger: true, onClick: () => setDialog({ kind: "deleteVersion", version }) },
               ]} />
             </div>
@@ -221,6 +243,16 @@ export default function SongPage() {
       )}
     </div>
   );
+}
+
+/** "Move earlier/later" menu items, offered only next to a version recorded the same day. */
+function sameDayMoves(versions: Version[], version: Version, move: (v: Version, step: -1 | 1) => void) {
+  const i = versions.findIndex((v) => v.id === version.id);
+  const day = versionDay(version);
+  const items = [];
+  if (versions[i - 1] && versionDay(versions[i - 1]) === day) items.push({ label: "Move earlier (left)", onClick: () => move(version, -1) });
+  if (versions[i + 1] && versionDay(versions[i + 1]) === day) items.push({ label: "Move later (right)", onClick: () => move(version, 1) });
+  return items;
 }
 
 function EditVersionDialog({ version, onClose, onSaved }: { version: Version; onClose: () => void; onSaved: () => void }) {

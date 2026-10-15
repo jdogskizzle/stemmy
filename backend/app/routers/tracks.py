@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 from .. import config
 from ..auth import current_user, current_user_media
 from ..db import get_db
-from ..models import Song, Track, User, Version, new_id
+from ..models import Song, Track, User, Version, new_id, version_day
 from ..processing import ProbeError, enqueue, original_path, peaks_path, probe, stream_path
-from ..schemas import TrackOut, TrackUpdate, VersionCreate, VersionOut, VersionUpdate, track_out, version_out
+from ..schemas import TrackOut, TrackUpdate, VersionCreate, VersionOrder, VersionOut, VersionUpdate, track_out, version_out
 from .library import purge_tracks, touch_song
 
 router = APIRouter(prefix="/api/v1", tags=["versions & tracks"])
@@ -38,17 +38,41 @@ def _get_track(db: Session, track_id: str) -> Track:
 
 # ---------- versions ----------
 
+def _next_position(song: Song, day, exclude: Version | None = None) -> int:
+    """Position that puts a version after every other version of `song` on `day`."""
+    same_day = [v.position for v in song.versions if v is not exclude and version_day(v) == day]
+    return max(same_day, default=-1) + 1
+
+
 @router.post("/songs/{song_id}/versions", response_model=VersionOut, status_code=201,
              summary="Create an (empty) version; then upload one track per instrument to it")
 def create_version(song_id: str, body: VersionCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    if not db.get(Song, song_id):
+    song = db.get(Song, song_id)
+    if not song:
         raise HTTPException(404, "Song not found")
     version = Version(song_id=song_id, label=body.label.strip(), recorded_on=body.recorded_on,
                       notes=body.notes, created_by_id=user.id)
+    version.position = _next_position(song, version_day(version))
     db.add(version)
     touch_song(db, song_id)
     db.commit()
     return version_out(version)
+
+
+@router.put("/songs/{song_id}/versions/order", status_code=204, dependencies=[Depends(current_user)],
+            summary="Set the order of a song's versions; only the order within each recording day takes effect")
+def order_versions(song_id: str, body: VersionOrder, db: Session = Depends(get_db)):
+    song = db.get(Song, song_id)
+    if not song:
+        raise HTTPException(404, "Song not found")
+    by_id = {v.id: v for v in song.versions}
+    if sorted(body.version_ids) != sorted(by_id):
+        raise HTTPException(400, "version_ids must list every version of the song exactly once")
+    for i, version_id in enumerate(body.version_ids):
+        by_id[version_id].position = i
+    touch_song(db, song_id)
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.get("/versions/{version_id}", response_model=VersionOut, dependencies=[Depends(current_user)])
@@ -61,8 +85,11 @@ def update_version(version_id: str, body: VersionUpdate, db: Session = Depends(g
     version = _get_version(db, version_id)
     if body.label is not None:
         version.label = body.label.strip()
-    if "recorded_on" in body.model_fields_set:
+    if "recorded_on" in body.model_fields_set and body.recorded_on != version.recorded_on:
+        old_day = version_day(version)
         version.recorded_on = body.recorded_on
+        if version_day(version) != old_day:  # moved to another day: goes after that day's versions
+            version.position = _next_position(version.song, version_day(version), exclude=version)
     if body.notes is not None:
         version.notes = body.notes
     db.commit()

@@ -30,7 +30,10 @@ def _bootstrap_admin() -> None:
 
 def _migrate() -> None:
     """Add columns introduced after a table was first created (create_all only creates missing tables)."""
-    added = {"documents": {"format": "VARCHAR(16) NOT NULL DEFAULT 'text'"}}
+    added = {
+        "documents": {"format": "VARCHAR(16) NOT NULL DEFAULT 'text'"},
+        "versions": {"position": "INTEGER NOT NULL DEFAULT 0"},
+    }
     with engine.begin() as conn:
         insp = inspect(conn)
         for table, columns in added.items():

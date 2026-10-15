@@ -4,7 +4,8 @@ A self-hosted multitrack player for band practice. Organize songs in folders, up
 instrument stems, flip between versions recorded on different dates, and mute or solo any instrument instantly.
 
 - **Folders → Songs → Versions → Tracks.** Folders nest. A version is one recording (e.g. "10/5 practice"),
-  and a track is one instrument's stem in that recording.
+  and a track is one instrument's stem in that recording. Versions run oldest to newest, left to right, and a
+  song opens on the newest; versions recorded the same day can be put in order from the version menu.
 - **Instant mute/solo.** All stems are decoded in the browser and started on the same audio-clock sample, so they
   stay locked together. Mute, solo and volume only change gain, so toggling never stalls or drifts.
 - **Seamless version switching.** The current version keeps playing while the next one loads, then playback
@@ -86,6 +87,7 @@ Media endpoints also accept `?access_token=` for native players that can't set h
 | `POST/PATCH/DELETE /api/v1/folders[/{id}]` | Create, rename/move (`parent_id: null` = root), delete recursively |
 | `POST/GET/PATCH/DELETE /api/v1/songs[/{id}]` | Song with every version and track embedded |
 | `POST /api/v1/songs/{id}/versions` | Create a version `{label, recorded_on, notes}` |
+| `PUT /api/v1/songs/{id}/versions/order` | `{version_ids}` in display order; sets the order of same-day versions |
 | `POST /api/v1/versions/{id}/tracks` | Multipart upload: `file` + `instrument` (processed in the background) |
 | `POST /api/v1/songs/{id}/documents` | Create a document `{title, body, format: "text" \| "markdown"}` |
 | `GET/PATCH/DELETE /api/v1/documents/{id}` | Read, edit `{title, body, format, position, revision}`, delete. A stale `revision` gets 409 + the current document |

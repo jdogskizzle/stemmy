@@ -21,7 +21,7 @@ export interface Track {
   original_url: string; created_at: string;
 }
 export interface Version {
-  id: string; song_id: string; label: string; recorded_on: string | null; notes: string;
+  id: string; song_id: string; label: string; recorded_on: string | null; notes: string; position: number;
   created_by: string | null; track_count: number; ready: boolean; duration: number | null;
   tracks: Track[]; created_at: string; updated_at: string;
 }
@@ -131,6 +131,9 @@ export const api = {
   updateVersion: (id: string, patch: { label?: string; recorded_on?: string | null; notes?: string }) =>
     request<Version>("PATCH", `/versions/${id}`, patch),
   deleteVersion: (id: string) => request<void>("DELETE", `/versions/${id}`),
+  /** Every version id of the song in display order; only the order within each recording day is kept. */
+  orderVersions: (songId: string, versionIds: string[]) =>
+    request<void>("PUT", `/songs/${songId}/versions/order`, { version_ids: versionIds }),
 
   updateTrack: (id: string, patch: { instrument?: string; position?: number }) => request<Track>("PATCH", `/tracks/${id}`, patch),
   deleteTrack: (id: string) => request<void>("DELETE", `/tracks/${id}`),

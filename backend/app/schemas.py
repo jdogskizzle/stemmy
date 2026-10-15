@@ -154,6 +154,10 @@ class VersionUpdate(BaseModel):
     notes: str | None = None
 
 
+class VersionOrder(BaseModel):
+    version_ids: list[str] = Field(description="Every version of the song, in the order to show them")
+
+
 class VersionSummary(Model):
     id: str
     song_id: str
@@ -168,6 +172,7 @@ class VersionOut(Model):
     label: str
     recorded_on: date | None
     notes: str
+    position: int = Field(description="Order among versions recorded on the same day")
     created_by: str | None = Field(description="Username of the uploader")
     track_count: int
     ready: bool = Field(description="True when every track has finished processing")
@@ -221,7 +226,9 @@ class SongOut(Model):
     notes: str
     folder_id: str | None
     breadcrumbs: list[Breadcrumb]
-    versions: list[VersionOut] = Field(description="Newest recording first")
+    versions: list[VersionOut] = Field(
+        description="Oldest first, by recording date (upload date when unset); same-day versions in the band's chosen order"
+    )
     documents: list[DocumentSummary] = Field(description="Text documents (lyrics, chords...); fetch each for its body")
     created_at: datetime
     updated_at: datetime
@@ -256,7 +263,7 @@ def breadcrumbs(folder: Folder | None) -> list[Breadcrumb]:
 
 
 def song_summary(s: Song) -> SongSummary:
-    latest = s.versions[0] if s.versions else None
+    latest = s.versions[-1] if s.versions else None
     return SongSummary(
         id=s.id, title=s.title, folder_id=s.folder_id, version_count=len(s.versions),
         latest_version=VersionSummary.model_validate(latest) if latest else None,
@@ -280,7 +287,7 @@ def track_out(t: Track) -> TrackOut:
 def version_out(v: Version) -> VersionOut:
     durations = [t.duration for t in v.tracks if t.status == "ready" and t.duration]
     return VersionOut(
-        id=v.id, song_id=v.song_id, label=v.label, recorded_on=v.recorded_on, notes=v.notes,
+        id=v.id, song_id=v.song_id, label=v.label, recorded_on=v.recorded_on, notes=v.notes, position=v.position,
         created_by=v.created_by.username if v.created_by else None,
         track_count=len(v.tracks),
         ready=bool(v.tracks) and all(t.status == "ready" for t in v.tracks),

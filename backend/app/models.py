@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, TypeDecorator
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, TypeDecorator, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -72,7 +72,8 @@ class Song(Base):
     versions: Mapped[list["Version"]] = relationship(
         back_populates="song",
         passive_deletes=True,
-        order_by=lambda: [Version.recorded_on.desc(), Version.created_at.desc()],
+        # Oldest first by recording day (upload day when unset); the band orders same-day versions.
+        order_by=lambda: [version_day_sql(), Version.position, Version.created_at],
     )
     documents: Mapped[list["Document"]] = relationship(
         back_populates="song", passive_deletes=True, order_by=lambda: [Document.position, Document.created_at]
@@ -87,6 +88,8 @@ class Version(Base):
     label: Mapped[str] = mapped_column(String(255))
     recorded_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     notes: Mapped[str] = mapped_column(Text, default="")
+    # Order among versions recorded on the same day (see Song.versions).
+    position: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
@@ -96,6 +99,16 @@ class Version(Base):
     tracks: Mapped[list["Track"]] = relationship(
         back_populates="version", passive_deletes=True, order_by=lambda: [Track.position, Track.created_at]
     )
+
+
+def version_day(v: "Version") -> date:
+    """The day a version sorts under: its recording date, else the (UTC) day it was uploaded."""
+    return v.recorded_on or (v.created_at or utcnow()).date()
+
+
+def version_day_sql():
+    """SQL form of version_day (created_at is stored as naive UTC)."""
+    return func.coalesce(Version.recorded_on, func.date(Version.created_at))
 
 
 class Track(Base):
