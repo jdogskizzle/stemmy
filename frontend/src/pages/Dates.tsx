@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type DateSummary, type RecordingDate } from "../api";
-import { formatDate, formatLongDate, formatTime } from "../util";
+import { formatBytes, formatDate, formatLongDate, formatTime } from "../util";
 
 /** Browse recordings by day: every date with recordings, or everything recorded on one date. */
 export default function DatesPage() {
@@ -56,6 +56,7 @@ function DateList() {
                   <span className="muted small">
                     {plural(d.song_count, "song")}
                     {d.version_count !== d.song_count && ` · ${plural(d.version_count, "version")}`}
+                    {d.size_bytes > 0 && ` · ${formatBytes(d.size_bytes)}`}
                   </span>
                 </span>
               </Link>
@@ -92,7 +93,10 @@ function DayView({ day }: { day: string }) {
         <Link to="/">Library</Link><span className="sep">/</span><Link to="/dates">Dates</Link>
       </nav>
       <div className="page-head">
-        <h1>{/^\d{4}-\d{2}-\d{2}$/.test(day) ? formatLongDate(day) : day}</h1>
+        <h1>
+          {/^\d{4}-\d{2}-\d{2}$/.test(day) ? formatLongDate(day) : day}
+          {!!data?.size_bytes && <span className="head-meta">{formatBytes(data.size_bytes)}</span>}
+        </h1>
         <div className="row gap">
           {data?.previous
             ? <Link className="btn small" to={`/dates/${data.previous}`} title="Previous date with recordings">← {formatDate(data.previous)}</Link>
@@ -121,6 +125,7 @@ function DayView({ day }: { day: string }) {
                     version.label,
                     version.tracks.map((t) => t.instrument).join(", ") || "No tracks yet",
                     version.duration ? formatTime(version.duration) : null,
+                    version.size_bytes > 0 ? formatBytes(version.size_bytes) : null,
                     breadcrumbs.length ? `in ${breadcrumbs.map((b) => b.name).join(" / ")}` : null,
                   ].filter(Boolean).join(" · ")}
                 </span>

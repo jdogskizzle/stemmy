@@ -4,7 +4,7 @@ import { api, type Folder, type Library, type SongSummary } from "../api";
 import { Menu } from "../components/Menu";
 import { ConfirmDialog, PromptDialog } from "../components/Modal";
 import { MoveDialog } from "../components/MoveDialog";
-import { formatDate } from "../util";
+import { formatBytes, formatDate } from "../util";
 
 type Dialog =
   | { kind: "newFolder" } | { kind: "newSong" }
@@ -44,7 +44,10 @@ export default function LibraryPage() {
         ))}
       </nav>
       <div className="page-head">
-        <h1>{data?.folder?.name ?? "Library"}</h1>
+        <h1>
+          {data?.folder?.name ?? "Library"}
+          {!!data?.size_bytes && <span className="head-meta">{formatBytes(data.size_bytes)}</span>}
+        </h1>
         <div className="row gap">
           <input className="search" type="search" placeholder="Search songs & folders" value={query}
             onChange={(e) => setQuery(e.target.value)} />
@@ -76,7 +79,8 @@ export default function LibraryPage() {
                   <span className="card-title">{f.name}</span>
                   <span className="muted small">
                     {[f.folder_count && `${f.folder_count} folder${f.folder_count === 1 ? "" : "s"}`,
-                      `${f.song_count} song${f.song_count === 1 ? "" : "s"}`].filter(Boolean).join(" · ")}
+                      `${f.song_count} song${f.song_count === 1 ? "" : "s"}`,
+                      f.size_bytes > 0 && formatBytes(f.size_bytes)].filter(Boolean).join(" · ")}
                   </span>
                 </span>
                 <Menu items={[
@@ -102,6 +106,7 @@ export default function LibraryPage() {
                   <span className="muted small">
                     {s.version_count === 0 ? "No versions yet" : `${s.version_count} version${s.version_count === 1 ? "" : "s"}`}
                     {s.latest_version && ` · latest ${s.latest_version.label}${s.latest_version.recorded_on ? ` (${formatDate(s.latest_version.recorded_on)})` : ""}`}
+                    {s.size_bytes > 0 && ` · ${formatBytes(s.size_bytes)}`}
                   </span>
                 </span>
                 <Menu items={[

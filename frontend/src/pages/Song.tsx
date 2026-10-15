@@ -8,7 +8,7 @@ import { Documents } from "../components/Documents";
 import { ConfirmDialog, Modal, PromptDialog } from "../components/Modal";
 import { Player } from "../components/Player";
 import { UploadDialog } from "../components/UploadDialog";
-import { formatDate } from "../util";
+import { formatBytes, formatDate } from "../util";
 
 type Dialog =
   | { kind: "upload" } | { kind: "addTracks"; version: Version } | { kind: "editVersion"; version: Version }
@@ -122,7 +122,7 @@ export default function SongPage() {
         ))}
       </nav>
       <div className="page-head">
-        <h1>{song.title}</h1>
+        <h1>{song.title}{song.size_bytes > 0 && <span className="head-meta">{formatBytes(song.size_bytes)}</span>}</h1>
         <div className="row gap">
           <button className="btn primary" onClick={() => setDialog({ kind: "upload" })}>Upload version</button>
           <Menu items={[
@@ -156,6 +156,7 @@ export default function SongPage() {
               <div className="grow">
                 <span className="muted small">
                   {version.track_count} track{version.track_count === 1 ? "" : "s"}
+                  {version.size_bytes > 0 && ` · ${formatBytes(version.size_bytes)}`}
                   {version.created_by && ` · uploaded by ${version.created_by}`}
                   {" · "}<Link to={`/dates/${versionDay(version)}`} className="link">Everything from {formatDate(versionDay(version))}</Link>
                 </span>
@@ -173,7 +174,7 @@ export default function SongPage() {
           {readyTracks.length > 0 && (
             <Player tracks={readyTracks} fallbackDuration={version?.duration ?? 0} trackMenu={(track) => [
               { label: "Rename instrument", onClick: () => setDialog({ kind: "renameTrack", track }) },
-              { label: "Download original", onClick: () => void downloadAuthenticated(track.original_url, track.original_filename) },
+              { label: `Download original (${formatBytes(track.size_bytes)})`, onClick: () => void downloadAuthenticated(track.original_url, track.original_filename) },
               { label: "Delete track", danger: true, onClick: () => setDialog({ kind: "deleteTrack", track }) },
             ]} />
           )}

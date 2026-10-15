@@ -5,13 +5,13 @@ export interface TokenOut { access_token: string; token_type: "bearer"; expires_
 export interface Breadcrumb { id: string; name: string }
 export interface Folder {
   id: string; name: string; parent_id: string | null; folder_count: number; song_count: number;
-  created_at: string; updated_at: string;
+  size_bytes: number; created_at: string; updated_at: string;
 }
 export interface FolderNode { id: string; name: string; children: FolderNode[] }
 export interface VersionSummary { id: string; song_id: string; label: string; recorded_on: string | null; created_at: string }
 export interface SongSummary {
   id: string; title: string; folder_id: string | null; version_count: number;
-  latest_version: VersionSummary | null; created_at: string; updated_at: string;
+  latest_version: VersionSummary | null; size_bytes: number; created_at: string; updated_at: string;
 }
 export type TrackStatus = "pending" | "processing" | "ready" | "error";
 export interface Track {
@@ -23,7 +23,7 @@ export interface Track {
 export interface Version {
   id: string; song_id: string; label: string; recorded_on: string | null; notes: string; position: number;
   created_by: string | null; track_count: number; ready: boolean; duration: number | null;
-  tracks: Track[]; created_at: string; updated_at: string;
+  size_bytes: number; tracks: Track[]; created_at: string; updated_at: string;
 }
 export type DocumentFormat = "text" | "markdown";
 export interface DocumentSummary {
@@ -33,12 +33,16 @@ export interface DocumentSummary {
 export interface SongDocument extends DocumentSummary { body: string }
 export interface Song {
   id: string; title: string; notes: string; folder_id: string | null; breadcrumbs: Breadcrumb[];
-  versions: Version[]; documents: DocumentSummary[]; created_at: string; updated_at: string;
+  versions: Version[]; documents: DocumentSummary[]; size_bytes: number; created_at: string; updated_at: string;
 }
-export interface DateSummary { date: string; version_count: number; song_count: number }
+export interface DateSummary { date: string; version_count: number; song_count: number; size_bytes: number }
 export interface DateEntry { song_id: string; song_title: string; folder_id: string | null; breadcrumbs: Breadcrumb[]; version: Version }
-export interface RecordingDate { date: string; previous: string | null; next: string | null; entries: DateEntry[] }
-export interface Library { folder: Folder | null; breadcrumbs: Breadcrumb[]; folders: Folder[]; songs: SongSummary[] }
+export interface RecordingDate {
+  date: string; previous: string | null; next: string | null; entries: DateEntry[]; size_bytes: number;
+}
+export interface Library {
+  folder: Folder | null; breadcrumbs: Breadcrumb[]; folders: Folder[]; songs: SongSummary[]; size_bytes: number;
+}
 export interface Peaks { peaks_per_second: number; length: number; data: number[] }
 
 /** Path prefix the app is served under ("" at the root, "/stemmy" behind a path proxy). */

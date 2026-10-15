@@ -73,6 +73,7 @@ class FolderOut(Model):
     parent_id: str | None
     folder_count: int
     song_count: int
+    size_bytes: int = Field(0, description="Total size of the uploaded audio files in the folder and its subfolders, in bytes")
     created_at: datetime
     updated_at: datetime
 
@@ -100,6 +101,7 @@ class SongSummary(Model):
     folder_id: str | None
     version_count: int
     latest_version: "VersionSummary | None"
+    size_bytes: int = Field(0, description="Total size of the uploaded audio files, in bytes")
     created_at: datetime
     updated_at: datetime
 
@@ -109,6 +111,7 @@ class LibraryOut(BaseModel):
     breadcrumbs: list[Breadcrumb]
     folders: list[FolderOut]
     songs: list[SongSummary]
+    size_bytes: int = Field(0, description="Total uploaded audio in this folder, or the whole library at the root")
 
 
 class FolderTreeNode(BaseModel):
@@ -178,6 +181,7 @@ class VersionOut(Model):
     track_count: int
     ready: bool = Field(description="True when every track has finished processing")
     duration: float | None = Field(description="Longest ready track, in seconds")
+    size_bytes: int = Field(0, description="Total size of the uploaded audio files, in bytes")
     tracks: list[TrackOut]
     created_at: datetime
     updated_at: datetime
@@ -231,6 +235,7 @@ class SongOut(Model):
         description="Oldest first, by recording date (upload date when unset); same-day versions in the band's chosen order"
     )
     documents: list[DocumentSummary] = Field(description="Text documents (lyrics, chords...); fetch each for its body")
+    size_bytes: int = Field(0, description="Total size of the uploaded audio files, in bytes")
     created_at: datetime
     updated_at: datetime
 
@@ -249,6 +254,7 @@ class DateSummary(BaseModel):
     date: dt.date = Field(description="Recording date (upload date for versions without one)")
     version_count: int
     song_count: int
+    size_bytes: int = Field(0, description="Total size of the uploaded audio files, in bytes")
 
 
 class DateEntry(BaseModel):
@@ -264,14 +270,15 @@ class DateOut(BaseModel):
     previous: date | None = Field(description="The closest earlier date with recordings")
     next: date | None = Field(description="The closest later date with recordings")
     entries: list[DateEntry] = Field(description="Every version from this date, by song title")
+    size_bytes: int = Field(0, description="Total size of the uploaded audio files, in bytes")
 
 
 # ---------- serializers ----------
 
-def folder_out(f: Folder) -> FolderOut:
+def folder_out(f: Folder, size_bytes: int = 0) -> FolderOut:
     return FolderOut(
         id=f.id, name=f.name, parent_id=f.parent_id,
-        folder_count=len(f.children), song_count=len(f.songs),
+        folder_count=len(f.children), song_count=len(f.songs), size_bytes=size_bytes,
         created_at=f.created_at, updated_at=f.updated_at,
     )
 
@@ -284,11 +291,11 @@ def breadcrumbs(folder: Folder | None) -> list[Breadcrumb]:
     return list(reversed(crumbs))
 
 
-def song_summary(s: Song) -> SongSummary:
+def song_summary(s: Song, size_bytes: int = 0) -> SongSummary:
     latest = s.versions[-1] if s.versions else None
     return SongSummary(
         id=s.id, title=s.title, folder_id=s.folder_id, version_count=len(s.versions),
-        latest_version=VersionSummary.model_validate(latest) if latest else None,
+        latest_version=VersionSummary.model_validate(latest) if latest else None, size_bytes=size_bytes,
         created_at=s.created_at, updated_at=s.updated_at,
     )
 
@@ -314,6 +321,7 @@ def version_out(v: Version) -> VersionOut:
         track_count=len(v.tracks),
         ready=bool(v.tracks) and all(t.status == "ready" for t in v.tracks),
         duration=max(durations) if durations else None,
+        size_bytes=sum(t.size_bytes or 0 for t in v.tracks),
         tracks=[track_out(t) for t in v.tracks],
         created_at=v.created_at, updated_at=v.updated_at,
     )
@@ -332,10 +340,11 @@ def document_out(d: Document) -> DocumentOut:
 
 
 def song_out(s: Song) -> SongOut:
+    versions = [version_out(v) for v in s.versions]
     return SongOut(
         id=s.id, title=s.title, notes=s.notes, folder_id=s.folder_id,
         breadcrumbs=breadcrumbs(s.folder),
-        versions=[version_out(v) for v in s.versions],
+        versions=versions, size_bytes=sum(v.size_bytes for v in versions),
         documents=[document_summary(d) for d in s.documents],
         created_at=s.created_at, updated_at=s.updated_at,
     )
